@@ -13,10 +13,30 @@ let statsMapPromise: Promise<Map<string, any>> | null = null;
 
 type ModEntry = { text: string; type: string };
 
+function formatPropertyLine(prop: any): string | null {
+  const name = prop && prop.name;
+  if (!name || !name.includes("{")) return null;
+  const values = (prop.values || []).map((value: any) => value && value[0]).filter(Boolean);
+  if (values.length === 0) return null;
+  let result = name;
+  values.forEach((value: string, index: number) => {
+    result = result.replace(new RegExp(`\\{${index}\\}`, "g"), value);
+  });
+  return result;
+}
+
 function buildStatKeyCandidates(text: string, itemData: any): string[] {
   const base = normalizeModText(text, true);
   const raw = normalizeModText(text, false);
   const candidates = [base, raw];
+  const requireBase = base.replace(/^Requires\b/, "Require");
+  if (requireBase !== base) candidates.push(requireBase);
+  const requireRaw = raw.replace(/^Requires\b/, "Require");
+  if (requireRaw !== raw) candidates.push(requireRaw);
+  const fewerBase = base.replace(/\bfewer\b/g, "additional");
+  if (fewerBase !== base) candidates.push(fewerBase);
+  const fewerRaw = raw.replace(/\bfewer\b/g, "additional");
+  if (fewerRaw !== raw) candidates.push(fewerRaw);
   const costEff = base.replace(/ Cost Efficiency\b/g, " Cost");
   if (costEff !== base) candidates.push(costEff);
   if (base.includes("Charges per use")) {
@@ -71,6 +91,15 @@ function collectModEntries(itemData: any): ModEntry[] {
   }
   for (const mod of itemData.desecratedMods || []) {
     entries.push({ text: mod, type: "desecrated" });
+  }
+
+  for (const prop of itemData.properties || []) {
+    const line = formatPropertyLine(prop);
+    if (line) entries.push({ text: line, type: "explicit" });
+  }
+  for (const prop of itemData.additionalProperties || []) {
+    const line = formatPropertyLine(prop);
+    if (line) entries.push({ text: line, type: "explicit" });
   }
 
   const runeSocketCount = getRuneSocketCount(itemData);

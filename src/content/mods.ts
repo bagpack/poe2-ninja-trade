@@ -148,7 +148,13 @@ export function shouldNegate(modText: string, statText: string | undefined): boo
   const modIncrease = mod.includes("increased") || mod.includes("more");
   const statDecrease = stat.includes("reduced") || stat.includes("less");
   const statIncrease = stat.includes("increased") || stat.includes("more");
+  const modFewer = mod.includes("fewer");
+  const statFewer = stat.includes("fewer");
+  const modAdditional = mod.includes("additional");
+  const statAdditional = stat.includes("additional");
   if (modDecrease && statIncrease) return true;
   if (modIncrease && statDecrease) return true;
+  if (modFewer && statAdditional) return true;
+  if (modAdditional && statFewer) return true;
   return false;
 }
