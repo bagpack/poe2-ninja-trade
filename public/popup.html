@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>poe2-ninja-trade</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 12px;
+        color: #1f2937;
+        min-width: 240px;
+      }
+      h1 {
+        font-size: 14px;
+        margin: 0 0 8px 0;
+      }
+      .section {
+        margin-bottom: 8px;
+      }
+      label {
+        margin-right: 12px;
+      }
+      .hint {
+        font-size: 11px;
+        color: #6b7280;
+      }
+    </style>
+  </head>
+  <body>
+    <h1 data-i18n="options_title">Options</h1>
+    <div class="section">
+      <div data-i18n="options_language_label">Trade site language</div>
+      <div>
+        <label>
+          <input type="radio" name="tradeLanguage" value="en" />
+          <span data-i18n="options_language_en">English</span>
+        </label>
+        <label>
+          <input type="radio" name="tradeLanguage" value="ja" />
+          <span data-i18n="options_language_ja">Japanese</span>
+        </label>
+      </div>
+      <div class="hint" data-i18n="options_language_hint">
+        Japanese opens jp.pathofexile.com, English opens www.pathofexile.com.
+      </div>
+    </div>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

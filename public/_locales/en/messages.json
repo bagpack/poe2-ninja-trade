@@ -1,0 +1,23 @@
+{
+  "extension_name": {
+    "message": "poe2-ninja-trade"
+  },
+  "extension_description": {
+    "message": "Open PoE2 trade searches from poe.ninja equipment."
+  },
+  "options_title": {
+    "message": "Options"
+  },
+  "options_language_label": {
+    "message": "Trade site language (domain)"
+  },
+  "options_language_en": {
+    "message": "English"
+  },
+  "options_language_ja": {
+    "message": "Japanese"
+  },
+  "options_language_hint": {
+    "message": "Japanese opens jp.pathofexile.com, English opens www.pathofexile.com."
+  }
+}

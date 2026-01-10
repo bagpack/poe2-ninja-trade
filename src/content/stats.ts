@@ -1,0 +1,187 @@
+import {
+  applyNegate,
+  extractNumberRange,
+  getModPrefix,
+  normalizeModText,
+  prefixMatchesSlot,
+  shouldNegate,
+  swapDecreaseToIncrease
+} from "./mods";
+import { getRuneSocketCount, isFlaskItem, isRuneItem } from "./items";
+
+let statsMapPromise: Promise<Map<string, any>> | null = null;
+
+type ModEntry = { text: string; type: string };
+
+function buildStatKeyCandidates(text: string, itemData: any): string[] {
+  const base = normalizeModText(text, true);
+  const raw = normalizeModText(text, false);
+  const candidates = [base, raw];
+  const costEff = base.replace(/ Cost Efficiency\b/g, " Cost");
+  if (costEff !== base) candidates.push(costEff);
+  if (base.includes("Charges per use")) {
+    const swappedBase = swapDecreaseToIncrease(base);
+    if (swappedBase !== base) candidates.push(swappedBase);
+    const swappedRaw = swapDecreaseToIncrease(raw);
+    if (swappedRaw !== raw) candidates.push(swappedRaw);
+  }
+  if (isFlaskItem(itemData) && base.includes("Charges per use")) {
+    candidates.push(base.replace("Charges per use", "Flask Charges used"));
+  }
+  return candidates;
+}
+
+async function getStatsMap(): Promise<Map<string, any>> {
+  if (!statsMapPromise) {
+    statsMapPromise = new Promise((resolve) => {
+      chrome.runtime.sendMessage({ type: "getTradeStats" }, (response: any) => {
+        if (!response || !response.ok || !response.map) {
+          resolve(new Map());
+          return;
+        }
+        const map = new Map(Object.entries(response.map));
+        resolve(map);
+      });
+    });
+  }
+  return statsMapPromise;
+}
+
+function collectModEntries(itemData: any): ModEntry[] {
+  const entries: ModEntry[] = [];
+  for (const mod of itemData.explicitMods || []) {
+    entries.push({ text: mod, type: "explicit" });
+  }
+  for (const mod of itemData.mutatedMods || []) {
+    entries.push({ text: mod, type: "explicit" });
+  }
+  for (const mod of itemData.implicitMods || []) {
+    entries.push({ text: mod, type: "implicit" });
+  }
+  for (const mod of itemData.fracturedMods || []) {
+    entries.push({ text: mod, type: "fractured" });
+  }
+  for (const mod of itemData.enchantMods || []) {
+    entries.push({ text: mod, type: "enchant" });
+  }
+  for (const mod of itemData.runeMods || []) {
+    const prefix = getModPrefix(mod);
+    if (!prefixMatchesSlot(prefix, itemData)) continue;
+    entries.push({ text: mod, type: "augment" });
+  }
+  for (const mod of itemData.desecratedMods || []) {
+    entries.push({ text: mod, type: "desecrated" });
+  }
+
+  const runeSocketCount = getRuneSocketCount(itemData);
+  if (runeSocketCount > 0) {
+    const socketedItems = itemData.socketedItems || [];
+    const runeItems = socketedItems.filter(isRuneItem).slice(0, runeSocketCount);
+    for (const socketed of runeItems) {
+      for (const mod of socketed.explicitMods || []) {
+        const prefix = getModPrefix(mod);
+        if (!prefixMatchesSlot(prefix, itemData)) continue;
+        entries.push({ text: mod, type: "augment" });
+      }
+      for (const mod of socketed.implicitMods || []) {
+        const prefix = getModPrefix(mod);
+        if (!prefixMatchesSlot(prefix, itemData)) continue;
+        entries.push({ text: mod, type: "augment" });
+      }
+      for (const mod of socketed.enchantMods || []) {
+        const prefix = getModPrefix(mod);
+        if (!prefixMatchesSlot(prefix, itemData)) continue;
+        entries.push({ text: mod, type: "augment" });
+      }
+      for (const mod of socketed.runeMods || []) {
+        const prefix = getModPrefix(mod);
+        if (!prefixMatchesSlot(prefix, itemData)) continue;
+        entries.push({ text: mod, type: "augment" });
+      }
+    }
+  }
+
+  const seen = new Set();
+  return entries.filter((entry) => {
+    const key = `${entry.type}::${entry.text}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function pickStatId(typeMap: any, preferredType: string): any | null {
+  if (!typeMap) return null;
+  if (typeMap[preferredType]) return typeMap[preferredType];
+  if (preferredType === "augment") {
+    if (typeMap.rune) return typeMap.rune;
+    const runeEntry = Object.values(typeMap).find((entry: any) =>
+      String(entry.id).startsWith("rune.")
+    );
+    return runeEntry || null;
+  }
+  if (preferredType === "rune") {
+    const runeEntry = Object.values(typeMap).find((entry: any) =>
+      String(entry.id).startsWith("rune.")
+    );
+    return runeEntry || null;
+  }
+  return (
+    typeMap.explicit ||
+    typeMap.implicit ||
+    typeMap.fractured ||
+    typeMap.enchant ||
+    typeMap.rune ||
+    typeMap.desecrated ||
+    typeMap.pseudo ||
+    Object.values(typeMap)[0] ||
+    null
+  );
+}
+
+export async function buildStatFilters(itemData: any): Promise<Array<{ id: string; value?: any }>> {
+  const statsMap = await getStatsMap();
+  const filtersById = new Map<string, { id: string; value?: any }>();
+  for (const entry of collectModEntries(itemData)) {
+    const keys = buildStatKeyCandidates(entry.text, itemData);
+    let typeMap: any = null;
+    for (const key of keys) {
+      typeMap = statsMap.get(key);
+      if (typeMap) break;
+    }
+    const picked = pickStatId(typeMap, entry.type);
+    if (!picked) continue;
+    const id = picked.id || picked;
+    const range = extractNumberRange(entry.text);
+    const allowsValue = picked.hasValue === true;
+    const isNegated = shouldNegate(entry.text, picked.text);
+    let maybeRange = isNegated ? applyNegate(range) : range;
+    if (
+      isNegated &&
+      maybeRange &&
+      typeof maybeRange.min === "number" &&
+      typeof maybeRange.max !== "number"
+    ) {
+      maybeRange = { max: maybeRange.min };
+    }
+    const existing = filtersById.get(id);
+    if (!existing) {
+      if (maybeRange && allowsValue) {
+        filtersById.set(id, { id, value: maybeRange });
+      } else {
+        filtersById.set(id, { id });
+      }
+      continue;
+    }
+    if (!maybeRange || !existing.value || !allowsValue) continue;
+    const next = { ...existing.value };
+    if (typeof maybeRange.min === "number") {
+      next.min = typeof next.min === "number" ? Math.max(next.min, maybeRange.min) : maybeRange.min;
+    }
+    if (typeof maybeRange.max === "number") {
+      next.max = typeof next.max === "number" ? Math.min(next.max, maybeRange.max) : maybeRange.max;
+    }
+    existing.value = next;
+  }
+  return Array.from(filtersById.values());
+}

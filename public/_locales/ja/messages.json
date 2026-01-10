@@ -1,0 +1,23 @@
+{
+  "extension_name": {
+    "message": "poe2-ninja-trade"
+  },
+  "extension_description": {
+    "message": "poe.ninjaの装備からPoE2トレード検索を開く"
+  },
+  "options_title": {
+    "message": "オプション"
+  },
+  "options_language_label": {
+    "message": "トレードサイトの言語（ドメイン）"
+  },
+  "options_language_en": {
+    "message": "英語"
+  },
+  "options_language_ja": {
+    "message": "日本語"
+  },
+  "options_language_hint": {
+    "message": "日本語は jp.pathofexile.com、英語は www.pathofexile.com を開きます。"
+  }
+}
