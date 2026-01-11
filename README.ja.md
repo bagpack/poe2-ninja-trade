@@ -1,4 +1,4 @@
-# poe2-ninja-trade
+# PoE2 ninja Trade
 
 [English](README.md) | 日本語
 
