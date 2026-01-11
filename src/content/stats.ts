@@ -25,10 +25,46 @@ function formatPropertyLine(prop: any): string | null {
   return result;
 }
 
+function shouldPreferLocalDefense(itemData: any): boolean {
+  const slot = itemData?.inventoryId || "";
+  const baseType = (itemData?.baseType || "").toLowerCase();
+  const typeLine = (itemData?.typeLine || "").toLowerCase();
+  const isArmourSlot =
+    slot === "Helm" || slot === "BodyArmour" || slot === "Gloves" || slot === "Boots";
+  const isShield = baseType.includes("shield") || typeLine.includes("shield");
+  return isArmourSlot || isShield;
+}
+
 function buildStatKeyCandidates(text: string, itemData: any): string[] {
   const base = normalizeModText(text, true);
   const raw = normalizeModText(text, false);
-  const candidates = [base, raw];
+  const candidates: string[] = [];
+  const preferLocal = shouldPreferLocalDefense(itemData);
+  const localBase = base
+    .replace(/ to Armour\b/g, " to Armour (Local)")
+    .replace(/ to Evasion Rating\b/g, " to Evasion Rating (Local)")
+    .replace(/ to Energy Shield\b/g, " to maximum Energy Shield (Local)")
+    .replace(/ to maximum Energy Shield\b/g, " to maximum Energy Shield (Local)")
+    .replace(/% increased Armour\b/g, "% increased Armour (Local)")
+    .replace(/% increased Evasion Rating\b/g, "% increased Evasion Rating (Local)")
+    .replace(/% increased Energy Shield\b/g, "% increased Energy Shield (Local)");
+  const localRaw = raw
+    .replace(/ to Armour\b/g, " to Armour (Local)")
+    .replace(/ to Evasion Rating\b/g, " to Evasion Rating (Local)")
+    .replace(/ to Energy Shield\b/g, " to maximum Energy Shield (Local)")
+    .replace(/ to maximum Energy Shield\b/g, " to maximum Energy Shield (Local)")
+    .replace(/% increased Armour\b/g, "% increased Armour (Local)")
+    .replace(/% increased Evasion Rating\b/g, "% increased Evasion Rating (Local)")
+    .replace(/% increased Energy Shield\b/g, "% increased Energy Shield (Local)");
+  if (preferLocal) {
+    if (localBase !== base) candidates.push(localBase);
+    if (localRaw !== raw) candidates.push(localRaw);
+  }
+  candidates.push(base, raw);
+  if (!preferLocal) {
+    if (localBase !== base) candidates.push(localBase);
+    if (localRaw !== raw) candidates.push(localRaw);
+  }
   const requireBase = base.replace(/^Requires\b/, "Require");
   if (requireBase !== base) candidates.push(requireBase);
   const requireRaw = raw.replace(/^Requires\b/, "Require");

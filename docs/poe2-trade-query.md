@@ -783,3 +783,16 @@ DOMが遅延描画される場合に備えて、`MutationObserver` で `findEqui
 - **ネゲート判定**: 元のmod側が `reduced/less` で、stats側が `increased/more` の場合は値を反転
 - **単一値の反転**: negatedで `min` のみ生成された場合は `max` に入れる（例: `-21` は `max: -21`）
 - **Flask Charges used へのフォールバック**: フラスコの場合は `Charges per use` を `Flask Charges used` に置換した候補も追加
+
+### 17.8 Armour/Evasion/Energy Shield の local 判定
+
+防具スロット（Helm/BodyArmour/Gloves/Boots）やShieldでは、数値防御系の `explicit` は trade2 側の `(Local)` に寄ることが多い。
+
+- **local候補を優先**: 防具/盾では `(Local)` 版のキーを先に評価し、通常版は後回し
+- **対応する置換**
+  - `# to Armour` → `# to Armour (Local)`
+  - `# to Evasion Rating` → `# to Evasion Rating (Local)`
+  - `# to Energy Shield` / `# to maximum Energy Shield` → `# to maximum Energy Shield (Local)`
+  - `#% increased Armour` → `#% increased Armour (Local)`
+  - `#% increased Evasion Rating` → `#% increased Evasion Rating (Local)`
+  - `#% increased Energy Shield` → `#% increased Energy Shield (Local)`
