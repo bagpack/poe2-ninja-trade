@@ -796,3 +796,10 @@ DOMが遅延描画される場合に備えて、`MutationObserver` で `findEqui
   - `#% increased Armour` → `#% increased Armour (Local)`
   - `#% increased Evasion Rating` → `#% increased Evasion Rating (Local)`
   - `#% increased Energy Shield` → `#% increased Energy Shield (Local)`
+
+### 17.9 フラットダメージ（Adds # to # ... Damage to Attacks）の値算出
+
+`Adds # to # [Element] Damage to Attacks` は trade2 のフィルタ値として**平均値**を使う。
+
+- 例: `Adds 5 to 10 Fire Damage to Attacks` → `(5 + 10) / 2 = 7.5`
+- value は平均値を `min` に入れる（参照実装の `getRollOrMinmaxAvg` と同等の扱い）

@@ -5,6 +5,7 @@ import {
   normalizeModText,
   prefixMatchesSlot,
   shouldNegate,
+  stripTags,
   swapDecreaseToIncrease
 } from "./mods";
 import { getRuneSocketCount, isFlaskItem, isRuneItem } from "./items";
@@ -33,6 +34,14 @@ function shouldPreferLocalDefense(itemData: any): boolean {
     slot === "Helm" || slot === "BodyArmour" || slot === "Gloves" || slot === "Boots";
   const isShield = baseType.includes("shield") || typeLine.includes("shield");
   return isArmourSlot || isShield;
+}
+
+function isFlatDamageToAttacks(text: string): boolean {
+  const plain = stripTags(text || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+  return plain.includes("adds ") && plain.includes(" damage to attacks");
 }
 
 function buildStatKeyCandidates(text: string, itemData: any): string[] {
@@ -217,7 +226,16 @@ export async function buildStatFilters(itemData: any): Promise<Array<{ id: strin
     const picked = pickStatId(typeMap, entry.type);
     if (!picked) continue;
     const id = picked.id || picked;
-    const range = extractNumberRange(entry.text);
+    let range = extractNumberRange(entry.text);
+    if (
+      range &&
+      typeof range.min === "number" &&
+      typeof range.max === "number" &&
+      isFlatDamageToAttacks(entry.text)
+    ) {
+      const avg = (range.min + range.max) / 2;
+      range = { min: avg };
+    }
     const allowsValue = picked.hasValue === true;
     const isNegated = shouldNegate(entry.text, picked.text);
     let maybeRange = isNegated ? applyNegate(range) : range;
